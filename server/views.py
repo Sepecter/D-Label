@@ -9,6 +9,7 @@ from django.http import JsonResponse
 import base64
 from io import BytesIO
 import zipfile
+import json
 from django.http import FileResponse
 
 
@@ -196,13 +197,18 @@ class User_Info(APIView):
 
 class Download(APIView):
 
-    def post(self, request):
+    def get(self, request):
         collection_id = request.GET.get('collection_id')
+
+        labels = models.Label_Info.objects.filter(belonging_id=collection_id)
+        categories_data = {}
+        for i in labels:
+            images = models.Photo_Info.objects.filter(label_id=i.id)
+            Arrlist = []
+            for j in images:
+                Arrlist.append(j.id)
+            categories_data[i.label_name] = Arrlist
         images = models.Photo_Info.objects.filter(collection_id=collection_id)
-        categories_data = []
-        for i in images:
-            dic = {'id': i.id, 'label': i.label}
-            categories_data.append(dic)
         download_io = BytesIO()
         with zipfile.ZipFile('images.zip', 'w', zipfile.ZIP_DEFLATED) as zip_fp:
             for i in images:
@@ -210,6 +216,6 @@ class Download(APIView):
                 with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
                     f.write(img_data)
             with zip_fp.open('categories.json', 'w') as f:
-                f.write(categories_data)
+                f.write(json.dumps(categories_data).encode("utf-8"))
         download_io.seek(0)
         return FileResponse(download_io, as_attachment=True, filename="images.zip")
