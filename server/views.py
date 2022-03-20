@@ -6,6 +6,10 @@ from rest_framework.views import APIView
 from rest_framework import exceptions
 from server import models
 from django.http import JsonResponse
+import base64
+from io import BytesIO
+import zipfile
+from django.http import FileResponse
 
 
 def md5(user):
@@ -99,7 +103,7 @@ class Collection(APIView):
         ret['class_detail'] = class_detail
         return JsonResponse(ret)
 
-    authentication_classes = [Authtication,]
+    authentication_classes = [Authtication, ]
 
     def post(self, request):
         ret = {}
@@ -133,16 +137,16 @@ class Photo(APIView):
         ret['code'] = 200
         return JsonResponse(ret)
 
-    authentication_classes = [Authtication,]
+    authentication_classes = [Authtication, ]
 
     def post(self, request):
         ret = {}
         collection_id = request.POST.get('collection_id')
         image = request.POST.get('image')
         label = request.POST.get('label')
-        label_object = models.Label_Info.objects.filter(belonging_id=collection_id,label_name=label).first()
+        label_object = models.Label_Info.objects.filter(belonging_id=collection_id, label_name=label).first()
         if not label_object:
-            label_object = models.Label_Info.objects.create(label_name=label,belonging_id=collection_id)
+            label_object = models.Label_Info.objects.create(label_name=label, belonging_id=collection_id)
             label_object.belonging.class_number = label_object.belonging.class_number + 1
             label_object.belonging.save()
         label_object.number = label_object.number + 1
@@ -150,7 +154,7 @@ class Photo(APIView):
         collection_object = label_object.belonging
         collection_object.photo_number = collection_object.photo_number + 1
         collection_object.save()
-        photo = models.Photo_Info.objects.create(photo=image,label_id=label_object.id,collection_id=collection_id)
+        photo = models.Photo_Info.objects.create(photo=image, label_id=label_object.id, collection_id=collection_id)
         ret['code'] = 200
         ret['photo_id'] = photo.id
         return JsonResponse(ret)
@@ -168,7 +172,7 @@ class Photo(APIView):
             label.belonging.class_number = label.belonging.class_number - 1
             label.belonging.save()
             label.delete()
-        photo.collection.photo_number =  photo.collection.photo_number - 1
+        photo.collection.photo_number = photo.collection.photo_number - 1
         photo.collection.save()
         photo.delete()
         ret['code'] = 200
@@ -177,7 +181,7 @@ class Photo(APIView):
 
 class User_Info(APIView):
 
-    def get(self,request):
+    def get(self, request):
         ret = {}
         token = request.GET.get('token')
         user = models.User_Info.objects.filter(token=token).first()
@@ -188,3 +192,24 @@ class User_Info(APIView):
         ret['code'] = 200
         ret['collection_id_list'] = collection_id_list
         return JsonResponse(ret)
+
+
+class Download(APIView):
+
+    def post(self, request):
+        collection_id = request.GET.get('collection_id')
+        images = models.Photo_Info.objects.filter(collection_id=collection_id)
+        categories_data = []
+        for i in images:
+            dic = {'id': i.id, 'label': i.label}
+            categories_data.append(dic)
+        download_io = BytesIO()
+        with zipfile.ZipFile('images.zip', 'w', zipfile.ZIP_DEFLATED) as zip_fp:
+            for i in images:
+                img_data = base64.b64decode(i.photo)
+                with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
+                    f.write(img_data)
+            with zip_fp.open('categories.json', 'w') as f:
+                f.write(categories_data)
+        download_io.seek(0)
+        return FileResponse(download_io, as_attachment=True, filename="images.zip")
