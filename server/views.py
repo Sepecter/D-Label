@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework import exceptions
 from server import models
 from django.http import JsonResponse
+from django.http import HttpResponse
 import base64
 from io import BytesIO
 import zipfile
@@ -199,7 +200,8 @@ class Download(APIView):
 
     def get(self, request):
         collection_id = request.GET.get('collection_id')
-
+        if not models.Collection_Info.objects.filter(id=collection_id):
+            return HttpResponse(404)
         labels = models.Label_Info.objects.filter(belonging_id=collection_id)
         categories_data = {}
         for i in labels:
