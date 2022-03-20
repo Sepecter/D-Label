@@ -26,5 +26,6 @@ urlpatterns = [
     path(r'collection', views.Collection.as_view()),
     path(r'photo', views.Photo.as_view()),
     path(r'user_info', views.User_Info.as_view()),
+    path(r'download', views.Download.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
