@@ -6,12 +6,13 @@ from rest_framework.views import APIView
 from rest_framework import exceptions
 from server import models
 from django.http import JsonResponse
-from django.http import HttpResponse
 import base64
-from io import BytesIO
-import zipfile
+from torchvision import transforms
+import torch
+import os
 import json
-from django.http import FileResponse
+from server.model_v2 import MobileNetV2
+from datetime import datetime
 
 
 def md5(user):
@@ -88,6 +89,7 @@ class Collection(APIView):
     def get(self, request):
         ret = {}
         collection_id = request.GET.get('collection_id')
+        image_code = request.GET.get('image_code')
         collection = models.Collection_Info.objects.filter(id=collection_id).first()
         photo = models.Photo_Info.objects.filter(collection=collection)
         label = models.Label_Info.objects.filter(belonging=collection)
@@ -96,13 +98,33 @@ class Collection(APIView):
         for i in photo:
             photo_id_list.append(i.id)
         for i in label:
-            class_detail.append((i.label_name, i.number))
+            first_photo = models.Photo_Info.objects.filter(label_id=i.id).first()
+            dic = {
+                'class_name': i.label_name,
+                'photo_number': i.number,
+                'image': first_photo.photo
+            }
+            class_detail.append(dic)
         ret['code'] = 200
         ret['name'] = collection.name
+        ret['description'] = collection.description
+        ret['created_time'] = collection.created_time
         ret['photo_number'] = collection.photo_number
         ret['photo_id_list'] = photo_id_list
         ret['class_number'] = collection.class_number
         ret['class_detail'] = class_detail
+        if image_code == 1:
+            image = []
+            for i in photo:
+                dic = {
+                    'id': i.id,
+                    'image': i.photo,
+                    'created_time': i.created_time,
+                    'label': i.label,
+                    'sub_label': i.sub_label
+                }
+                image.append(dic)
+            ret['image'] = image
         return JsonResponse(ret)
 
     authentication_classes = [Authtication, ]
@@ -111,7 +133,9 @@ class Collection(APIView):
         ret = {}
         user = request.user
         name = request.POST.get('name')
-        collection = models.Collection_Info.objects.create(name=name, owner_id=user.id)
+        description = request.POST.get('description')
+        collection = models.Collection_Info.objects.create(name=name, owner_id=user.id, description=description,
+                                                           created_time=str(datetime.now()))
         ret['code'] = 200
         ret['collection_id'] = collection.id
         return JsonResponse(ret)
@@ -136,6 +160,8 @@ class Photo(APIView):
             return JsonResponse(ret)
         ret['photo'] = object.photo
         ret['label'] = object.label
+        ret['sub_label'] = object.sub_label
+        ret['created_time'] = object.created_time
         ret['code'] = 200
         return JsonResponse(ret)
 
@@ -146,6 +172,7 @@ class Photo(APIView):
         collection_id = request.POST.get('collection_id')
         image = request.POST.get('image')
         label = request.POST.get('label')
+        sub_label = request.POST.get('sub_label')
         label_object = models.Label_Info.objects.filter(belonging_id=collection_id, label_name=label).first()
         if not label_object:
             label_object = models.Label_Info.objects.create(label_name=label, belonging_id=collection_id)
@@ -156,7 +183,8 @@ class Photo(APIView):
         collection_object = label_object.belonging
         collection_object.photo_number = collection_object.photo_number + 1
         collection_object.save()
-        photo = models.Photo_Info.objects.create(photo=image, label_id=label_object.id, collection_id=collection_id)
+        photo = models.Photo_Info.objects.create(photo=image, label_id=label_object.id, collection_id=collection_id,
+                                                 created_time=str(datetime.now()), sub_label=sub_label)
         ret['code'] = 200
         ret['photo_id'] = photo.id
         return JsonResponse(ret)
@@ -188,36 +216,94 @@ class User_Info(APIView):
         token = request.GET.get('token')
         user = models.User_Info.objects.filter(token=token).first()
         collection = models.Collection_Info.objects.filter(owner_id=user.id)
-        collection_id_list = []
+        collection_list = []
         for i in collection:
-            collection_id_list.append(i.id)
+            image = models.Photo_Info.objects.filter(collection=i).first()
+            dic = {
+                'id': i.id,
+                'description': i.description,
+                'image': image.photo
+            }
+            collection_list.append(dic)
         ret['code'] = 200
-        ret['collection_id_list'] = collection_id_list
+        ret['username'] = user.email
+        ret['collection_list'] = collection_list
         return JsonResponse(ret)
 
 
-class Download(APIView):
+class Label(APIView):
 
     def get(self, request):
+        ret = {}
+        token = request.GET.get('token')
         collection_id = request.GET.get('collection_id')
-        if not models.Collection_Info.objects.filter(id=collection_id):
-            return HttpResponse(404)
-        labels = models.Label_Info.objects.filter(belonging_id=collection_id)
-        categories_data = {}
-        for i in labels:
-            images = models.Photo_Info.objects.filter(label_id=i.id)
-            Arrlist = []
-            for j in images:
-                Arrlist.append(j.id)
-            categories_data[i.label_name] = Arrlist
-        images = models.Photo_Info.objects.filter(collection_id=collection_id)
-        download_io = BytesIO()
-        with zipfile.ZipFile('images.zip', 'w', zipfile.ZIP_DEFLATED) as zip_fp:
-            for i in images:
-                img_data = base64.b64decode(i.photo)
-                with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
-                    f.write(img_data)
-            with zip_fp.open('categories.json', 'w') as f:
-                f.write(json.dumps(categories_data).encode("utf-8"))
-        download_io.seek(0)
-        return FileResponse(download_io, as_attachment=True, filename="images.zip")
+        label_name = request.GET.get('label_name')
+        user = models.User_Info.objects.first(token=token).first()
+        if not user:
+            ret['code'] = 404
+            return JsonResponse(ret)
+        image = models.Photo_Info.objects.filter(label__label_name=label_name, collection_id=collection_id)
+        photo_list = []
+        for i in image:
+            dic = {
+                'image': i.photo,
+                'sub_label': i.sub_label,
+                'created_time': i.created_time
+            }
+            photo_list.append(dic)
+        ret['code'] = 200
+        ret['photo_list'] = photo_list
+        return JsonResponse(ret)
+
+
+class Predict(APIView):
+
+    # 此处传入的为base64编码
+    def post(self, request):
+        ret = {}
+        # base64编码格式的图片
+        image = request.POST.get('image')
+        # 如果传入的为空图片，则返回报错信息，提示重新传图
+        if image == '':
+            ret['code'] = 404
+            return JsonResponse(ret)
+        # 处理为jpg格式图片,并以predict_img为名保存为jpg格式
+        with open('./predict_img.jpg', 'wb') as f:
+            img = base64.b64decode(image)
+            f.write(img)
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        data_transform = transforms.Compose(
+            [transforms.Resize(256),
+             transforms.CenterCrop(224),
+             transforms.ToTensor(),
+             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+
+        # 准备图像数据、类别信息数据
+        img_path = './predict_img.jpg'
+        assert os.path.exists(img_path), "file: '{}' dose not exist.".format(img_path)
+        img = data_transform(img)
+        img = torch.unsqueeze(img, dim=0)
+        json_path = './class_indices.json'
+        assert os.path.exists(json_path), "file: '{}' dose not exist.".format(json_path)
+        json_file = open(json_path, 'r')
+        class_indict = json.load(json_file)
+
+        # 创建模型
+        model = MobileNetV2(num_classes=11).to(device)
+        model_weight_path = './MobileNetV2.pth'
+        model.load_state_dict(torch.load(model_weight_path, map_location=device))
+        model.eval()
+        with torch.no_grad():
+            # 预测类别信息
+            output = torch.squeeze(model(img.to(device))).cpu()
+            predict = torch.softmax(output, dim=0)
+            predict_cla = torch.argmax(predict).numpy()
+        # 类别结果信息
+        img_classification = class_indict[str(predict_cla)]
+        # 成功预测后返回成功状态码，类别信息
+        # 不确定需不需要返回原始图片编码信息或者返回编码后的图片
+        ret['label'] = img_classification
+        ret['code'] = 200
+        return JsonResponse(ret)

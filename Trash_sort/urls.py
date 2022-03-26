@@ -16,8 +16,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from server import views
-from django.conf.urls.static import static
-from Trash_sort import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +24,7 @@ urlpatterns = [
     path(r'collection', views.Collection.as_view()),
     path(r'photo', views.Photo.as_view()),
     path(r'user_info', views.User_Info.as_view()),
-    path(r'download', views.Download.as_view()),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path(r'predict', views.Predict.as_view()),
 
+
+]

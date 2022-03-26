@@ -1,5 +1,15 @@
 #  git ignore
 
+# python pack
+/*.whl
+
+# photo
+/*.png
+/*.jpg
+
+# json
+/*.json
+
 # IDEA
 /.idea
 
