@@ -25,6 +25,6 @@ urlpatterns = [
     path(r'photo', views.Photo.as_view()),
     path(r'user_info', views.User_Info.as_view()),
     path(r'predict', views.Predict.as_view()),
+    path(r'label', views.Label.as_view()),
     path(r'download', views.Download.as_view()),
-
 ]

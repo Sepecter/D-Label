@@ -4,11 +4,12 @@
 /*.whl
 
 # photo
+zip/
+/*.zip
+image/
 /*.png
 /*.jpg
 
-# json
-/*.json
 
 # IDEA
 /.idea

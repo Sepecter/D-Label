@@ -8,10 +8,11 @@ from server import models
 from django.http import JsonResponse
 import base64
 from torchvision import transforms
+from server.model_v2 import MobileNetV2
 import torch
+from PIL import Image
 import os
 import json
-from server.model_v2 import MobileNetV2
 from datetime import datetime
 import base64
 from io import BytesIO
@@ -118,18 +119,20 @@ class Collection(APIView):
         ret['photo_id_list'] = photo_id_list
         ret['class_number'] = collection.class_number
         ret['class_detail'] = class_detail
-        if image_code == 1:
+        print(image_code)
+        if image_code == '1':
             image = []
             for i in photo:
                 dic = {
                     'id': i.id,
                     'image': i.photo,
                     'created_time': i.created_time,
-                    'label': i.label,
+                    'label': i.label.label_name,
                     'sub_label': i.sub_label
                 }
                 image.append(dic)
             ret['image'] = image
+        print(image)
         return JsonResponse(ret)
 
     authentication_classes = [Authtication, ]
@@ -227,6 +230,7 @@ class User_Info(APIView):
             dic = {
                 'id': i.id,
                 'description': i.description,
+                'created_time': i.created_time,
                 'image': image.photo
             }
             collection_list.append(dic)
@@ -243,8 +247,7 @@ class Label(APIView):
         token = request.GET.get('token')
         collection_id = request.GET.get('collection_id')
         label_name = request.GET.get('label_name')
-        user = models.User_Info.objects.first(token=token).first()
-        if not user:
+        if not models.User_Info.objects.filter(token=token):
             ret['code'] = 404
             return JsonResponse(ret)
         image = models.Photo_Info.objects.filter(label__label_name=label_name, collection_id=collection_id)
@@ -277,7 +280,10 @@ class Download(APIView):
             categories_data[i.label_name] = Arrlist
         images = models.Photo_Info.objects.filter(collection_id=collection_id)
         download_io = BytesIO()
-        with zipfile.ZipFile('images.zip', 'w', zipfile.ZIP_DEFLATED) as zip_fp:
+        date = str(datetime.now())
+        date = date.replace(' ', '-')
+        date = date.replace(':', '-')
+        with zipfile.ZipFile('./zip/images_%s.zip' % date, 'w', zipfile.ZIP_DEFLATED) as zip_fp:
             for i in images:
                 img_data = base64.b64decode(i.photo)
                 with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
@@ -285,7 +291,7 @@ class Download(APIView):
             with zip_fp.open('categories.json', 'w') as f:
                 f.write(json.dumps(categories_data).encode("utf-8"))
         download_io.seek(0)
-        return FileResponse(download_io, as_attachment=True, filename="images.zip")
+        return FileResponse(download_io, as_attachment=True, filename="images%s.zip" % date)
 
 
 class Predict(APIView):
@@ -300,8 +306,11 @@ class Predict(APIView):
             ret['code'] = 404
             return JsonResponse(ret)
         # 处理为jpg格式图片,并以predict_img为名保存为jpg格式
-        img_path = './image/predict_img.jpg'
-        json_path = './json/class_indices.json'
+        date = str(datetime.now())
+        date = date.replace(' ', '-')
+        date = date.replace(':', '-')
+        img_path = r'./image/predict_img_%s.jpg' % date
+        json_path = r'./json/class_indices.json'
         with open(img_path, 'wb') as f:
             img = base64.b64decode(image)
             f.write(img)
@@ -316,6 +325,7 @@ class Predict(APIView):
 
         # 准备图像数据、类别信息数据
         assert os.path.exists(img_path), "file: '{}' dose not exist.".format(img_path)
+        img = Image.open(img_path)
         img = data_transform(img)
         img = torch.unsqueeze(img, dim=0)
         assert os.path.exists(json_path), "file: '{}' dose not exist.".format(json_path)
@@ -324,7 +334,7 @@ class Predict(APIView):
 
         # 创建模型
         model = MobileNetV2(num_classes=11).to(device)
-        model_weight_path = './MobileNetV2.pth'
+        model_weight_path = './pth/MobileNetV2.pth'
         model.load_state_dict(torch.load(model_weight_path, map_location=device))
         model.eval()
         with torch.no_grad():
@@ -336,6 +346,7 @@ class Predict(APIView):
         img_classification = class_indict[str(predict_cla)]
         # 成功预测后返回成功状态码，类别信息
         # 不确定需不需要返回原始图片编码信息或者返回编码后的图片
-        ret['label'] = img_classification
         ret['code'] = 200
+        ret['label'] = img_classification
+        os.remove(img_path)
         return JsonResponse(ret)
