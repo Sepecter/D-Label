@@ -13,6 +13,11 @@ import os
 import json
 from server.model_v2 import MobileNetV2
 from datetime import datetime
+import base64
+from io import BytesIO
+import zipfile
+from django.http import FileResponse
+from django.http import HttpResponse
 
 
 def md5(user):
@@ -256,6 +261,33 @@ class Label(APIView):
         return JsonResponse(ret)
 
 
+class Download(APIView):
+
+    def get(self, request):
+        collection_id = request.GET.get('collection_id')
+        if not models.Collection_Info.objects.filter(id=collection_id):
+            return HttpResponse(404)
+        labels = models.Label_Info.objects.filter(belonging_id=collection_id)
+        categories_data = {}
+        for i in labels:
+            images = models.Photo_Info.objects.filter(label_id=i.id)
+            Arrlist = []
+            for j in images:
+                Arrlist.append(j.id)
+            categories_data[i.label_name] = Arrlist
+        images = models.Photo_Info.objects.filter(collection_id=collection_id)
+        download_io = BytesIO()
+        with zipfile.ZipFile('images.zip', 'w', zipfile.ZIP_DEFLATED) as zip_fp:
+            for i in images:
+                img_data = base64.b64decode(i.photo)
+                with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
+                    f.write(img_data)
+            with zip_fp.open('categories.json', 'w') as f:
+                f.write(json.dumps(categories_data).encode("utf-8"))
+        download_io.seek(0)
+        return FileResponse(download_io, as_attachment=True, filename="images.zip")
+
+
 class Predict(APIView):
 
     # 此处传入的为base64编码
@@ -268,7 +300,9 @@ class Predict(APIView):
             ret['code'] = 404
             return JsonResponse(ret)
         # 处理为jpg格式图片,并以predict_img为名保存为jpg格式
-        with open('./predict_img.jpg', 'wb') as f:
+        img_path = './image/predict_img.jpg'
+        json_path = './json/class_indices.json'
+        with open(img_path, 'wb') as f:
             img = base64.b64decode(image)
             f.write(img)
 
@@ -281,11 +315,9 @@ class Predict(APIView):
              transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
         # 准备图像数据、类别信息数据
-        img_path = './predict_img.jpg'
         assert os.path.exists(img_path), "file: '{}' dose not exist.".format(img_path)
         img = data_transform(img)
         img = torch.unsqueeze(img, dim=0)
-        json_path = './class_indices.json'
         assert os.path.exists(json_path), "file: '{}' dose not exist.".format(json_path)
         json_file = open(json_path, 'r')
         class_indict = json.load(json_file)
