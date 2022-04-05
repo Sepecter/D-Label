@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-$)200zizs=m&l8)_!)%u^pbnn+4lyulwhw8peaz4new=dmilc3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -78,8 +78,12 @@ WSGI_APPLICATION = 'Trash_sort.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'Trash_Sort',
+        'USER':'root',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+        'PASSWORD': '1357924680qazQAZ!',
     }
 }
 

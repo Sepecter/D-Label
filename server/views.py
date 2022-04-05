@@ -223,6 +223,10 @@ class User_Info(APIView):
         ret = {}
         token = request.GET.get('token')
         user = models.User_Info.objects.filter(token=token).first()
+        if not user :
+            ret['code'] = 404
+            ret['msg'] = 'token错误'
+            return JsonResponse(ret)
         collection = models.Collection_Info.objects.filter(owner_id=user.id)
         collection_list = []
         for i in collection:

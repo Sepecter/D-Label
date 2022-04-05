@@ -6,11 +6,9 @@ colorama==0.4.4
 Cython==3.0.0a10
 Django==4.0.3
 djangorestframework==3.13.1
-djangorestframework-jwt==1.11.0
 numpy==1.22.3
 Pillow==9.0.1
 pyfiglet==0.8.post1
-PyJWT==2.3.0
 pytz==2022.1
 pyzt==1.0.1
 sqlparse==0.4.2
