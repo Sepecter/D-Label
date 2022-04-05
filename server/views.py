@@ -231,12 +231,20 @@ class User_Info(APIView):
         collection_list = []
         for i in collection:
             image = models.Photo_Info.objects.filter(collection=i).first()
-            dic = {
-                'id': i.id,
-                'description': i.description,
-                'created_time': i.created_time,
-                'image': image.photo
-            }
+            if not image :
+                dic = {
+                    'id': i.id,
+                    'description': i.description,
+                    'created_time': i.created_time,
+                    'image' : ''
+                }
+            else :
+                dic = {
+                    'id': i.id,
+                    'description': i.description,
+                    'created_time': i.created_time,
+                    'image': image.photo
+                }
             collection_list.append(dic)
         ret['code'] = 200
         ret['username'] = user.email
