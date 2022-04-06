@@ -119,7 +119,6 @@ class Collection(APIView):
         ret['photo_id_list'] = photo_id_list
         ret['class_number'] = collection.class_number
         ret['class_detail'] = class_detail
-        print(image_code)
         if image_code == '1':
             image = []
             for i in photo:
@@ -132,7 +131,6 @@ class Collection(APIView):
                 }
                 image.append(dic)
             ret['image'] = image
-        print(image)
         return JsonResponse(ret)
 
     authentication_classes = [Authtication, ]
@@ -234,6 +232,7 @@ class User_Info(APIView):
             if not image :
                 dic = {
                     'id': i.id,
+                    'name': i.name,
                     'description': i.description,
                     'created_time': i.created_time,
                     'image' : ''
@@ -241,6 +240,7 @@ class User_Info(APIView):
             else :
                 dic = {
                     'id': i.id,
+                    'name': i.name,
                     'description': i.description,
                     'created_time': i.created_time,
                     'image': image.photo
