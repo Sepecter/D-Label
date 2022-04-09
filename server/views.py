@@ -161,7 +161,7 @@ class Photo(APIView):
         ret = {}
         photo_id = request.GET.get('photo_id')
         obj = models.Photo_Info.objects.filter(id=photo_id).first()
-        if not object:
+        if not obj:
             ret['code'] = 404
             return JsonResponse(ret)
         ret['code'] = 200
