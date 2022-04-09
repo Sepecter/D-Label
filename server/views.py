@@ -160,15 +160,15 @@ class Photo(APIView):
     def get(self, request):
         ret = {}
         photo_id = request.GET.get('photo_id')
-        object = models.Photo_Info.objects.filter(id=photo_id).first()
+        obj = models.Photo_Info.objects.filter(id=photo_id).first()
         if not object:
             ret['code'] = 404
             return JsonResponse(ret)
-        ret['photo'] = object.photo
-        ret['label'] = object.label
-        ret['sub_label'] = object.sub_label
-        ret['created_time'] = object.created_time
         ret['code'] = 200
+        ret['photo'] = obj.photo
+        ret['label'] = obj.label.label_name
+        ret['sub_label'] = obj.sub_label
+        ret['created_time'] = obj.created_time
         return JsonResponse(ret)
 
     authentication_classes = [Authtication, ]
