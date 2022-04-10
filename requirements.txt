@@ -1,13 +1,16 @@
 asgiref==3.5.0
 azt==0.0.7
 backports.zoneinfo==0.2.1
+cffi==1.15.0
 click==8.0.4
 colorama==0.4.4
+cryptography==36.0.2
 Cython==3.0.0a10
 Django==4.0.3
 djangorestframework==3.13.1
 numpy==1.22.3
 Pillow==9.0.1
+pycparser==2.21
 pyfiglet==0.8.post1
 PyMySQL==1.0.2
 pytz==2022.1
