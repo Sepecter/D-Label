@@ -14,7 +14,6 @@ from PIL import Image
 import os
 import json
 from datetime import datetime
-import base64
 from io import BytesIO
 import zipfile
 from django.http import FileResponse
@@ -297,7 +296,8 @@ class Download(APIView):
         date = date.replace(':', '-')
         with zipfile.ZipFile('./zip/images_%s.zip' % date, 'w', zipfile.ZIP_DEFLATED) as zip_fp:
             for i in images:
-                img_data = base64.b64decode(i.photo)
+                image = i.photo.split(',')
+                img_data = base64.b64decode(image[1])
                 with zip_fp.open('image_%d.jpg' % i.id, 'w') as f:
                     f.write(img_data)
             with zip_fp.open('categories.json', 'w') as f:
@@ -318,6 +318,8 @@ class Predict(APIView):
             ret['code'] = 404
             return JsonResponse(ret)
         # 处理为jpg格式图片,并以predict_img为名保存为jpg格式
+        image = image.split(',')
+        image = image[1]
         date = str(datetime.now())
         date = date.replace(' ', '-')
         date = date.replace(':', '-')
