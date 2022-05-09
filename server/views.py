@@ -38,7 +38,7 @@ class Authtication(object):
         token_obj = models.User_Info.objects.filter(token=token).first()
         if not token_obj:
             raise exceptions.AuthenticationFailed('token失效')
-        return (token_obj, token)
+        return token_obj, token
 
     def authenticate_header(self, request):
         pass
@@ -97,7 +97,11 @@ class Collection(APIView):
         ret = {}
         collection_id = request.GET.get('collection_id')
         image_code = request.GET.get('image_code')
+        token = request.GET.get('token')
+        user = models.User_Info.objects.filter(token=token).first()
         collection = models.Collection_Info.objects.filter(id=collection_id).first()
+        if (not collection.owner.filter(token=token)) & (collection.permission != 0):
+            ret['code'] = 404
         photo = models.Photo_Info.objects.filter(collection=collection)
         label = models.Label_Info.objects.filter(belonging=collection)
         photo_id_list = []
@@ -141,8 +145,11 @@ class Collection(APIView):
         user = request.user
         name = request.POST.get('name')
         description = request.POST.get('description')
-        collection = models.Collection_Info.objects.create(name=name, owner_id=user.id, description=description,
-                                                           created_time=str(datetime.now()))
+        collection_type = request.POST.get('collection_type')
+        permission = request.POST.get('permission')
+        collection = models.Collection_Info.objects.create(name=name, owner_id=user.id,
+                                                           description=description, collection_type=collection_type,
+                                                           permission=permission, created_time=str(datetime.now()), )
         ret['code'] = 200
         ret['collection_id'] = collection.id
         return JsonResponse(ret)
@@ -222,7 +229,7 @@ class User_Info(APIView):
         ret = {}
         token = request.GET.get('token')
         user = models.User_Info.objects.filter(token=token).first()
-        if not user :
+        if not user:
             ret['code'] = 404
             ret['msg'] = 'token错误'
             return JsonResponse(ret)
@@ -230,15 +237,15 @@ class User_Info(APIView):
         collection_list = []
         for i in collection:
             image = models.Photo_Info.objects.filter(collection=i).first()
-            if not image :
+            if not image:
                 dic = {
                     'id': i.id,
                     'name': i.name,
                     'description': i.description,
                     'created_time': i.created_time,
-                    'image' : ''
+                    'image': ''
                 }
-            else :
+            else:
                 dic = {
                     'id': i.id,
                     'name': i.name,
