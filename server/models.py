@@ -19,6 +19,7 @@ class Collection_Info(models.Model):  # 数据集信息
     owner = models.ForeignKey('User_Info', on_delete=models.CASCADE)
     photo_number = models.IntegerField(default='0')
     class_number = models.IntegerField(default='0')
+    order = models.ForeignKey('Order_Info', on_delete=models.CASCADE, null=True, blank=True, default=None)
 
 
 class Label_Info(models.Model):  # 类别信息
@@ -44,3 +45,13 @@ class Message(models.Model):  # 修正信息
     sub_label = models.TextField(default='')
     coordinate1 = models.TextField(default='')
     coordinate2 = models.TextField(default='')
+
+
+class Order_Info(models.Model):  # 数据订单需求
+    owner = models.ForeignKey('User_Info', on_delete=models.CASCADE)
+    order_type = models.IntegerField(default=0)
+    amount_of_data = models.IntegerField(default=0)
+    description = models.TextField(default='')
+    started_time = models.TextField(default='')
+    created_time = models.TextField(default='')
+    collection = models.ForeignKey('Collection_Info', on_delete=models.CASCADE)

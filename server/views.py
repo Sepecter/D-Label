@@ -187,12 +187,17 @@ class Photo(APIView):
 
     def post(self, request):
         ret = {}
+        token = request.POST.get('token')
         collection_id = request.POST.get('collection_id')
         image = request.POST.get('image')
         label = request.POST.get('label')
         sub_label = request.POST.get('sub_label')
         coordinate1 = request.POST.get('coordinate1')
         coordinate2 = request.POST.get('coordinate2')
+        collection = models.Collection_Info.objects.filter(id=collection_id).first()
+        if (not collection.owner.filter(token=token)) & (collection.permission != 4):
+            ret['code'] = 404
+            return JsonResponse(ret)
         label_object = models.Label_Info.objects.filter(belonging_id=collection_id, label_name=label).first()
         if not label_object:
             label_object = models.Label_Info.objects.create(label_name=label, belonging_id=collection_id)
