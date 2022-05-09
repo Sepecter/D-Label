@@ -134,7 +134,7 @@ class Collection(APIView):
                     'label': i.label.label_name,
                     'sub_label': i.sub_label,
                     'coordinate1': i.coordinate1,
-                    'coordinate2' : i.coordinate2
+                    'coordinate2': i.coordinate2
                 }
                 image.append(dic)
             ret['image'] = image
@@ -233,22 +233,26 @@ class Photo(APIView):
         ret = {}
         photo_id = request.POST.get('photo_id')
         photo = models.Photo_Info.objects.filter(id=photo_id).first()
-        if not photo:
-            ret['code'] = 404
-            return JsonResponse(ret)
         image = request.POST.get('image')
-        if image:
-            photo.image = image
         sub_label = request.POST.get('sub_label')
-        if sub_label:
-            photo.sub_label = sub_label
         coordinate1 = request.POST.get('coordinate1')
-        if coordinate1:
-            photo.coordinate1 = coordinate1
         coordinate2 = request.POST.get('coordinate2')
-        if coordinate2:
-            photo.coordinate2 = coordinate2
-        photo.save()
+        if photo.collection.owner == request.user:
+            if not photo:
+                ret['code'] = 404
+                return JsonResponse(ret)
+            if image:
+                photo.image = image
+            if sub_label:
+                photo.sub_label = sub_label
+            if coordinate1:
+                photo.coordinate1 = coordinate1
+            if coordinate2:
+                photo.coordinate2 = coordinate2
+            photo.save()
+        else:
+            models.Message.objects.create(sender=request.user, receiver=photo.collection.owner, image=image,
+                                          sub_label=sub_label, coordinate1=coordinate1, coordinate2=coordinate2)
         ret['code'] = 200
         return JsonResponse(ret)
 
@@ -274,7 +278,7 @@ class User_Info(APIView):
                 'created_time': i.created_time,
             }
             if not image:
-                    dic['image'] = ''
+                dic['image'] = ''
             else:
                 dic['image'] = image.photo
             collection_list.append(dic)
