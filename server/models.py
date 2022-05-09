@@ -50,6 +50,7 @@ class Message(models.Model):  # 修正信息
 
 
 class Order_Info(models.Model):  # 数据订单需求
+    order_name = models.TextField(default='')
     owner = models.ForeignKey('User_Info', on_delete=models.CASCADE)
     order_type = models.IntegerField(default=0)
     amount_of_data = models.IntegerField(default=0)

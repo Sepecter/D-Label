@@ -150,8 +150,10 @@ class Collection(APIView):
         collection_type = request.POST.get('collection_type')
         permission = request.POST.get('permission')
         collection = models.Collection_Info.objects.create(name=name, owner_id=user.id,
-                                                           description=description, collection_type=collection_type,
-                                                           permission=permission, created_time=str(datetime.now()), )
+                                                           description=description,
+                                                           collection_type=int(collection_type),
+                                                           permission=int(permission),
+                                                           created_time=str(datetime.now()), )
         ret['code'] = 200
         ret['collection_id'] = collection.id
         return JsonResponse(ret)
@@ -443,4 +445,48 @@ class Predict(APIView):
         ret['code'] = 200
         ret['label'] = img_classification
         os.remove(img_path)
+        return JsonResponse(ret)
+
+
+class Order(APIView):
+    authentication_classes = [Authtication, ]
+
+    def get(self, request):
+        ret = {}
+        order_id = request.GET.get('order_id')
+        order = models.Order_Info.objects.filter(id=order_id).first()
+        if not order:
+            ret['code'] = 404
+            return JsonResponse(ret)
+        ret = {
+            'code': 200,
+            'order_name': order.order_name,
+            'order_type': order.order_type,
+            'amount_of_data': order.amount_of_data,
+            'description': order.description,
+            'started_time': order.started_time,
+            'created_time': order.created_time,
+            'collection_id': order.collection_id
+        }
+        return JsonResponse(ret)
+
+    def post(self, request):
+        ret = {}
+        order_name = request.POST.get('order_name')
+        order_type = request.POST.get('order_type')
+        amount_of_data = request.POST.get('amount_of_data')
+        description = request.POST.get('description')
+        started_time = request.POST.get('started_time')
+        collection_type = request.POST.get('collection_type')
+        collection = models.Collection_Info.objects.create(name=order_name, owner_id=request.user.id,
+                                                           description=description, collection_type=collection_type,
+                                                           permission=4, created_time=str(datetime.now()))
+        order = models.Order_Info.objects.create(order_name=order_name, owner_id=request.user.id,
+                                                 order_type=int(order_type), amount_of_data=int(amount_of_data),
+                                                 description=description, started_time=started_time,
+                                                 created_time=str(datetime.now()), collection=collection)
+        ret = {
+            'code': 200,
+            'order_id': order.id
+        }
         return JsonResponse(ret)
