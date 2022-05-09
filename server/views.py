@@ -229,6 +229,29 @@ class Photo(APIView):
         ret['code'] = 200
         return JsonResponse(ret)
 
+    def patch(self, request):
+        ret = {}
+        photo_id = request.POST.get('photo_id')
+        photo = models.Photo_Info.objects.filter(id=photo_id).first()
+        if not photo:
+            ret['code'] = 404
+            return JsonResponse(ret)
+        image = request.POST.get('image')
+        if image:
+            photo.image = image
+        sub_label = request.POST.get('sub_label')
+        if sub_label:
+            photo.sub_label = sub_label
+        coordinate1 = request.POST.get('coordinate1')
+        if coordinate1:
+            photo.coordinate1 = coordinate1
+        coordinate2 = request.POST.get('coordinate2')
+        if coordinate2:
+            photo.coordinate2 = coordinate2
+        photo.save()
+        ret['code'] = 200
+        return JsonResponse(ret)
+
 
 class User_Info(APIView):
 
