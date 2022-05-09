@@ -238,7 +238,9 @@ class Photo(APIView):
         ret = {}
         photo_id = request.POST.get('photo_id')
         photo = models.Photo_Info.objects.filter(id=photo_id).first()
+        collection = photo.label.belonging
         image = request.POST.get('image')
+        label = request.POST.get('label')
         sub_label = request.POST.get('sub_label')
         coordinate1 = request.POST.get('coordinate1')
         coordinate2 = request.POST.get('coordinate2')
@@ -248,6 +250,19 @@ class Photo(APIView):
                 return JsonResponse(ret)
             if image:
                 photo.image = image
+            if label:
+                photo.label.number = photo.label.number - 1
+                photo.label.save()
+                label_object = models.Label_Info.objects.filter(label_name=label, belonging=collection).first()
+                if label_object:
+                    photo.label = label_object
+                    photo.save()
+                else:
+                    label_object = models.Label_Info.objects.create(label_name=label, belonging_id=collection.id)
+                    label_object.belonging.class_number = label_object.belonging.class_number + 1
+                    label_object.belonging.save()
+                label_object.number = label_object.number + 1
+                label_object.save()
             if sub_label:
                 photo.sub_label = sub_label
             if coordinate1:
@@ -257,7 +272,8 @@ class Photo(APIView):
             photo.save()
         else:
             models.Message.objects.create(sender=request.user, receiver=photo.collection.owner, image=image,
-                                          sub_label=sub_label, coordinate1=coordinate1, coordinate2=coordinate2)
+                                          label=label, photo_id=photo_id, sub_label=sub_label, coordinate1=coordinate1,
+                                          coordinate2=coordinate2)
         ret['code'] = 200
         return JsonResponse(ret)
 
@@ -287,9 +303,29 @@ class User_Info(APIView):
             else:
                 dic['image'] = image.photo
             collection_list.append(dic)
+        message = models.Message.objects.filter(receiver=user.id)
+        message_list = []
+        for i in message:
+            dic = {
+                'username': i.sender.username,
+                'photo_id': i.photo_id,
+                'image': i.image,
+                'label': i.label,
+                'sub_label': i.sub_label,
+                'coordinate1': i.coordinate1,
+                'coordinate2': i.coordinate2,
+            }
+            message_list.append(dic)
+        order = models.Order_Info.objects.filter(owner_id=user.id)
+        order_list = []
+        for i in order:
+            order_list.append(i.id)
         ret['code'] = 200
         ret['username'] = user.email
+        ret['user_type'] = user.type
         ret['collection_list'] = collection_list
+        ret['message'] = message_list
+        ret['order_list'] = order_list
         return JsonResponse(ret)
 
 

@@ -41,7 +41,9 @@ class Photo_Info(models.Model):  # 图片信息
 class Message(models.Model):  # 修正信息
     sender = models.ForeignKey('User_Info', on_delete=models.CASCADE)
     receiver = models.ForeignKey('User_Info', on_delete=models.CASCADE)
+    photo_id = models.TextField(default='')
     image = models.TextField(default='')
+    label = models.TextField(default='')
     sub_label = models.TextField(default='')
     coordinate1 = models.TextField(default='')
     coordinate2 = models.TextField(default='')
