@@ -50,11 +50,12 @@ class Login(APIView):
         ret = {}
         email = request.POST.get('username')
         password = request.POST.get('password')
+        user_type = request.POST.get('user_type')
         if not email or not password:
             ret['code'] = 404
             ret['msg'] = '请求参数错误'
             return JsonResponse(ret)
-        user = models.User_Info.objects.filter(email=email, password=password).first()
+        user = models.User_Info.objects.filter(email=email, password=password, user_type=int(user_type)).first()
         if not user:
             ret['code'] = 404
             ret['msg'] = '用户名或密码错误'
@@ -73,6 +74,7 @@ class Register(APIView):
         ret = {}
         email = request.POST.get('username')
         password = request.POST.get('password')
+        user_type = request.POST.get('user_type')
         if not email or not password:
             ret['code'] = 404
             ret['msg'] = '请求参数错误'
@@ -83,7 +85,7 @@ class Register(APIView):
             ret['msg'] = '用户已注册'
             return JsonResponse(ret)
         token = md5(email)
-        models.User_Info.objects.create(email=email, password=password, token=token)
+        models.User_Info.objects.create(email=email, password=password, token=token, user_type=int(user_type))
         ret['code'] = 200
         ret['token'] = token
         return JsonResponse(ret)
