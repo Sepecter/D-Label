@@ -33,3 +33,5 @@ class Photo_Info(models.Model):  # 图片信息
     created_time = models.TextField(default='')
     sub_label = models.TextField(default='')
     collection = models.ForeignKey('Collection_Info', on_delete=models.CASCADE)
+    coordinate1 = models.TextField()
+    coordinate2 = models.TextField()

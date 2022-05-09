@@ -132,7 +132,9 @@ class Collection(APIView):
                     'image': i.photo,
                     'created_time': i.created_time,
                     'label': i.label.label_name,
-                    'sub_label': i.sub_label
+                    'sub_label': i.sub_label,
+                    'coordinate1': i.coordinate1,
+                    'coordinate2' : i.coordinate2
                 }
                 image.append(dic)
             ret['image'] = image
@@ -177,6 +179,8 @@ class Photo(APIView):
         ret['label'] = obj.label.label_name
         ret['sub_label'] = obj.sub_label
         ret['created_time'] = obj.created_time
+        ret['coordinate1'] = obj.coordinate1
+        ret['coordinate2'] = obj.coordinate2
         return JsonResponse(ret)
 
     authentication_classes = [Authtication, ]
@@ -187,6 +191,8 @@ class Photo(APIView):
         image = request.POST.get('image')
         label = request.POST.get('label')
         sub_label = request.POST.get('sub_label')
+        coordinate1 = request.POST.get('coordinate1')
+        coordinate2 = request.POST.get('coordinate2')
         label_object = models.Label_Info.objects.filter(belonging_id=collection_id, label_name=label).first()
         if not label_object:
             label_object = models.Label_Info.objects.create(label_name=label, belonging_id=collection_id)
@@ -198,7 +204,8 @@ class Photo(APIView):
         collection_object.photo_number = collection_object.photo_number + 1
         collection_object.save()
         photo = models.Photo_Info.objects.create(photo=image, label_id=label_object.id, collection_id=collection_id,
-                                                 created_time=str(datetime.now()), sub_label=sub_label)
+                                                 created_time=str(datetime.now()), sub_label=sub_label,
+                                                 coordinate1=coordinate1, coordinate2=coordinate2)
         ret['code'] = 200
         ret['photo_id'] = photo.id
         return JsonResponse(ret)
@@ -237,22 +244,16 @@ class User_Info(APIView):
         collection_list = []
         for i in collection:
             image = models.Photo_Info.objects.filter(collection=i).first()
+            dic = {
+                'id': i.id,
+                'name': i.name,
+                'description': i.description,
+                'created_time': i.created_time,
+            }
             if not image:
-                dic = {
-                    'id': i.id,
-                    'name': i.name,
-                    'description': i.description,
-                    'created_time': i.created_time,
-                    'image': ''
-                }
+                    dic['image'] = ''
             else:
-                dic = {
-                    'id': i.id,
-                    'name': i.name,
-                    'description': i.description,
-                    'created_time': i.created_time,
-                    'image': image.photo
-                }
+                dic['image'] = image.photo
             collection_list.append(dic)
         ret['code'] = 200
         ret['username'] = user.email
@@ -276,7 +277,9 @@ class Label(APIView):
             dic = {
                 'image': i.photo,
                 'sub_label': i.sub_label,
-                'created_time': i.created_time
+                'created_time': i.created_time,
+                'coordinate1': i.coordinate1,
+                'coordinate2': i.coordinate2,
             }
             photo_list.append(dic)
         ret['code'] = 200
