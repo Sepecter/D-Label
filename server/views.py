@@ -98,7 +98,6 @@ class Collection(APIView):
         collection_id = request.GET.get('collection_id')
         image_code = request.GET.get('image_code')
         token = request.GET.get('token')
-        user = models.User_Info.objects.filter(token=token).first()
         collection = models.Collection_Info.objects.filter(id=collection_id).first()
         if (not collection.owner.filter(token=token)) & (collection.permission != 0):
             ret['code'] = 404
@@ -489,4 +488,25 @@ class Order(APIView):
             'code': 200,
             'order_id': order.id
         }
+        return JsonResponse(ret)
+
+
+class owner(APIView):
+    authentication_classes = [Authtication, ]
+
+    def post(self, request):
+        ret = {}
+        username = request.POST.get('username')
+        collection_id = request.POST.get('collection_id')
+        collection = models.Collection_Info.objects.filter(id=collection_id).first()
+        if not collection.owner.filter(id=request.user.id):
+            ret['code'] = 404
+            return JsonResponse(ret)
+        user = models.User_Info.objects.filter(username=username).first()
+        if not user:
+            ret['code'] = 404
+            return JsonResponse(ret)
+        collection.owner.add(user)
+        collection.save()
+        ret['code'] = 200
         return JsonResponse(ret)
